@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple E-Commerce API UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    h2 {
+      background: #333;
+      color: white;
+      padding: 10px;
+    }
+
+    .section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+    }
+
+    input, button {
+      margin: 5px;
+      padding: 8px;
+      width: 250px;
+      display: block;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    pre {
+      background: #eee;
+      padding: 10px;
+      overflow-x: auto;
+    }
+
+    .token {
+      color: green;
+      font-size: 0.9em;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="section">
+    <h2>🔐 Login (Admin or Customer)</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p><strong>Token:</strong> <span id="tokenDisplay" class="token">Not logged in</span></p>
+  </div>
+
+  <div class="section">
+    <h2>📦 Add Product (Admin)</h2>
+    <input type="text" id="pname" placeholder="Product Name">
+    <input type="text" id="pcategory" placeholder="Category">
+    <input type="number" id="pprice" placeholder="Price">
+    <button onclick="addProduct()">Add Product</button>
+  </div>
+
+  <div class="section">
+    <h2>📋 View Products</h2>
+    <button onclick="getProducts()">Get All Products (Paginated)</button>
+    <pre id="productOutput"></pre>
+  </div>
+
+  <div class="section">
+    <h2>🛒 Add to Cart (Customer)</h2>
+    <input type="number" id="cartProductId" placeholder="Product ID">
+    <input type="number" id="qty" placeholder="Quantity">
+    <button onclick="addToCart()">Add to Cart</button>
+  </div>
+
+ <script>
+  let token = '';
+
+  function login() {
+    const data = {
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
+    };
+
+    fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => {
+      if (!res.ok) {
+        alert("Login failed!");
+        throw new Error("Login failed");
+      }
+      return res.json();
+    })
+    .then(data => {
+      token = data.token;
+      document.getElementById("tokenDisplay").innerText = token;
+      alert("Login successful!");
+      console.log("Logged in with token:", token);
+    })
+    .catch(err => console.error("Login error:", err));
+  }
+
+  function addProduct() {
+    const product = {
+      name: document.getElementById("pname").value,
+      category: document.getElementById("pcategory").value,
+      price: parseFloat(document.getElementById("pprice").value)
+    };
+
+    fetch('http://localhost:8080/api/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(product)
+    })
+    .then(res => {
+      console.log("Add Product status:", res.status);
+      return res.text().then(body => {
+        if (res.ok) {
+          alert("✅ Product added successfully!");
+        } else {
+          alert("❌ Failed to add product.\nStatus: " + res.status + "\nDetails: " + body);
+        }
+      });
+    })
+    .catch(err => console.error("Add Product error:", err));
+  }
+
+  function getProducts() {
+    fetch('http://localhost:8080/api/products?page=0&size=10')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("productOutput").innerText = JSON.stringify(data.content, null, 2);
+      })
+      .catch(err => console.error("Get Products error:", err));
+  }
+
+  function addToCart() {
+    const productId = document.getElementById("cartProductId").value;
+    const qty = document.getElementById("qty").value;
+
+    fetch(`http://localhost:8080/api/cart/add?productId=${productId}&qty=${qty}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    })
+    .then(res => {
+      console.log("Add to Cart status:", res.status);
+      return res.text().then(body => {
+        if (res.ok) {
+          alert("✅ Item added to cart!");
+        } else {
+          alert("❌ Failed to add to cart.\nStatus: " + res.status + "\nDetails: " + body);
+        }
+      });
+    })
+    .catch(err => console.error("Add to Cart error:", err));
+  }
+</script>
+
+</body>
+</html>
